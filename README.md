@@ -77,6 +77,33 @@ docker-compose restart agent-orchestrator
 
 ### Creating a Task
 
+#### Via Gitea Issues (Recommended)
+
+Create an issue in any Gitea repository with special labels:
+
+```markdown
+Title: [AI-TASK] Add user authentication to the API
+
+Labels: ai-agent-task, claude, priority-medium
+
+## Task Description
+Implement JWT-based user authentication for the REST API.
+
+## Repository
+Repository: https://github.com/myorg/api-server.git
+Branch: feature/auth
+
+## Requirements
+- Use bcrypt for password hashing
+- Implement login/logout endpoints
+- Add middleware for protected routes
+```
+
+**Required Labels:**
+- `ai-agent-task` - Marks issue as AI task
+- `claude` or `openai` - Selects agent type
+- `priority-high/medium/low` - Sets priority
+
 #### Via API
 
 ```bash
@@ -108,6 +135,17 @@ When an agent needs human input:
 1. **Agent creates issue**: Automatically creates a Gitea issue with context
 2. **Human responds**: Add comments to the issue with guidance
 3. **Agent continues**: Processes human input and continues task
+
+#### Agent Commands
+
+Control agents via issue comments:
+
+```
+@agent status    # Check current task status
+@agent pause     # Pause the current task
+@agent resume    # Resume a paused task
+@agent cancel    # Cancel the task
+```
 
 #### Response Format
 
@@ -375,6 +413,39 @@ docker-compose restart
 ./scripts/setup.sh clean
 ./scripts/setup.sh
 ```
+
+## 📋 Task Creation Methods
+
+### 1. Gitea Issues (Recommended)
+
+The most natural way to create tasks using your existing workflow:
+
+**Quick Example:**
+```markdown
+Title: [AI-TASK] Fix memory leak in data processor
+
+Labels: ai-agent-task, openai, priority-high
+
+Repository: https://github.com/myorg/processor.git
+Branch: bugfix/memory-leak
+
+The memory usage increases during large file processing...
+```
+
+**See detailed guide:** [Gitea Task Creation](docs/GITEA_TASK_CREATION.md)
+
+### 2. Special Assignees
+
+Assign issues to AI agent users:
+- `@ai-agent-claude` - Creates Claude task
+- `@ai-agent-openai` - Creates OpenAI task
+
+### 3. Issue Templates
+
+Use `.gitea/issue_template/` for consistent task creation:
+- `ai_feature.md` - Feature implementation
+- `ai_bugfix.md` - Bug fixes  
+- `ai_review.md` - Code reviews
 
 ## 📚 API Reference
 
