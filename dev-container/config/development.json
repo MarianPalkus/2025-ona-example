@@ -1,0 +1,77 @@
+{
+  "environment": "development",
+  "workspace": {
+    "root": "/workspace/repositories",
+    "defaultBranch": "main",
+    "autoClone": true,
+    "autoInstallDependencies": true
+  },
+  "tools": {
+    "node": {
+      "version": "18",
+      "packageManager": "npm",
+      "globalPackages": [
+        "typescript",
+        "ts-node",
+        "@types/node",
+        "nodemon",
+        "pm2"
+      ]
+    },
+    "python": {
+      "version": "3.11",
+      "packageManager": "pip",
+      "globalPackages": [
+        "poetry",
+        "black",
+        "flake8",
+        "pytest",
+        "jupyter"
+      ]
+    },
+    "go": {
+      "version": "1.21",
+      "modules": true
+    },
+    "rust": {
+      "edition": "2021",
+      "toolchain": "stable"
+    },
+    "java": {
+      "version": "17",
+      "buildTool": "maven"
+    }
+  },
+  "services": {
+    "ssh": {
+      "enabled": true,
+      "port": 22,
+      "user": "developer",
+      "password": "developer"
+    },
+    "devServers": {
+      "portRange": "3000-3010",
+      "autoStart": false,
+      "hotReload": true
+    }
+  },
+  "git": {
+    "user": {
+      "name": "AI Agent Developer",
+      "email": "agent@example.com"
+    },
+    "defaultRemote": "origin",
+    "autoCommit": false,
+    "commitMessageTemplate": "[AI Agent] {action}: {description}"
+  },
+  "security": {
+    "allowedHosts": ["*"],
+    "restrictedCommands": [],
+    "sandboxMode": false
+  },
+  "monitoring": {
+    "logLevel": "info",
+    "metricsEnabled": true,
+    "healthCheckInterval": 30
+  }
+}

@@ -1,0 +1,84 @@
+# Development overrides for docker-compose.yml
+# This file is automatically loaded by docker-compose and provides development-specific configurations
+
+version: '3.8'
+
+services:
+  gitea:
+    environment:
+      - GITEA__log__LEVEL=Debug
+      - GITEA__server__ENABLE_PPROF=true
+    volumes:
+      # Mount local data directory for development
+      - ./data/gitea:/data
+    ports:
+      # Expose additional ports for debugging
+      - "6060:6060"  # pprof
+
+  mcp-git-server:
+    environment:
+      - NODE_ENV=development
+      - DEBUG=mcp:*
+    volumes:
+      # Mount source code for hot reload in development
+      - ./mcp-server/src:/app/src
+      - ./mcp-server/config:/app/config
+    command: ["npm", "run", "dev"]
+
+  dev-container:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      # Additional development mounts
+      - ./dev-container/scripts:/home/developer/scripts
+      - ./data/dev-container-home:/home/developer
+    ports:
+      # Expose additional development ports
+      - "2223:22"    # SSH access
+      - "5000:5000"  # Additional dev server
+      - "8080:8080"  # Alternative port
+
+  agent-orchestrator:
+    environment:
+      - NODE_ENV=development
+      - DEBUG=agent:*
+    volumes:
+      # Mount source for development
+      - ./agent-orchestrator/src:/app/src
+      - ./agent-orchestrator/config:/app/config
+    command: ["npm", "run", "dev"]
+
+  web-ui:
+    environment:
+      - NODE_ENV=development
+    volumes:
+      # Mount source for development
+      - ./web-ui/src:/app/src
+    command: ["npm", "run", "dev"]
+
+  # Redis for task queue (development)
+  redis:
+    image: redis:7-alpine
+    container_name: redis-dev
+    ports:
+      - "6379:6379"
+    networks:
+      - agent-network
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+
+  # Optional: Database GUI for development
+  adminer:
+    image: adminer:latest
+    container_name: adminer-dev
+    ports:
+      - "8081:8080"
+    networks:
+      - agent-network
+    environment:
+      - ADMINER_DEFAULT_SERVER=gitea
+
+volumes:
+  redis-data:
+    driver: local
