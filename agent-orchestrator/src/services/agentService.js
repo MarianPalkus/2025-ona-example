@@ -82,7 +82,13 @@ class AgentService {
       // Initialize working environment
       await this.initializeWorkingEnvironment(agent, task);
 
-      // Execute task based on agent type
+      // Use development workflow for code-related tasks
+      if (this.isCodeTask(task)) {
+        const developmentWorkflow = require('./developmentWorkflow');
+        return await developmentWorkflow.executeWorkflow(agent, task);
+      }
+
+      // Execute task based on agent type for non-code tasks
       let result;
       if (agent.type === 'claude') {
         result = await this.executeWithClaude(agent, task);
@@ -101,6 +107,20 @@ class AgentService {
       logger.error(`Agent ${agent.id} failed:`, error);
       throw error;
     }
+  }
+
+  isCodeTask(task) {
+    const codeIndicators = [
+      'implement', 'add', 'create', 'build', 'develop', 'code',
+      'fix', 'bug', 'error', 'issue', 'refactor', 'optimize',
+      'feature', 'function', 'method', 'class', 'component',
+      'api', 'endpoint', 'database', 'model', 'service',
+      'test', 'unit test', 'integration', 'authentication',
+      'security', 'performance', 'migration', 'update'
+    ];
+    
+    const description = task.description.toLowerCase();
+    return codeIndicators.some(indicator => description.includes(indicator));
   }
 
   async initializeWorkingEnvironment(agent, task) {
@@ -478,11 +498,166 @@ Always explain your reasoning and next steps.`;
       isHumanResponse: true
     });
 
+    // Handle different types of human responses
+    if (response.type === 'clarification') {
+      await this.processClarificationResponse(agent, response);
+    } else if (response.type === 'verification') {
+      await this.processVerificationResponse(agent, response);
+    } else if (response.type === 'review_feedback') {
+      await this.processReviewFeedback(agent, response);
+    }
+
     // Resume agent execution with human input
     agent.status = 'working';
     logger.info(`Agent ${agentId} resuming with human input`);
 
     return agent;
+  }
+
+  async processClarificationResponse(agent, response) {
+    // Parse clarification answers and update task context
+    const answers = this.parseAnswers(response.content);
+    agent.context.clarificationAnswers = answers;
+    
+    // Continue with development workflow
+    const developmentWorkflow = require('./developmentWorkflow');
+    await developmentWorkflow.continueAfterClarification(agent, answers);
+  }
+
+  async processVerificationResponse(agent, response) {
+    // Parse verification response (approval/feedback)
+    const verification = this.parseVerification(response.content);
+    agent.context.verificationResponse = verification;
+    
+    if (verification.approved) {
+      // Continue with implementation
+      const developmentWorkflow = require('./developmentWorkflow');
+      await developmentWorkflow.continueAfterVerification(agent, verification);
+    } else {
+      // Revise implementation plan based on feedback
+      await this.reviseImplementationPlan(agent, verification.feedback);
+    }
+  }
+
+  async processReviewFeedback(agent, response) {
+    // Handle pull request review feedback
+    const developmentWorkflow = require('./developmentWorkflow');
+    await developmentWorkflow.handleReviewFeedback(agent, agent.currentTask, response.reviewComments);
+  }
+
+  parseAnswers(content) {
+    const answers = {};
+    const answerRegex = /ANSWER\s+(\d+):\s*(.+?)(?=ANSWER\s+\d+:|$)/gis;
+    let match;
+    
+    while ((match = answerRegex.exec(content)) !== null) {
+      answers[parseInt(match[1])] = match[2].trim();
+    }
+    
+    // If no structured answers found, treat entire content as general answer
+    if (Object.keys(answers).length === 0) {
+      answers[1] = content;
+    }
+    
+    return answers;
+  }
+
+  parseVerification(content) {
+    const approvalMatch = content.match(/APPROVAL:\s*(Yes|No)/i);
+    const feedbackMatch = content.match(/FEEDBACK:\s*(.+?)(?=PROCEED:|$)/is);
+    const proceedMatch = content.match(/PROCEED:\s*(.+?)$/is);
+    
+    return {
+      approved: approvalMatch ? approvalMatch[1].toLowerCase() === 'yes' : false,
+      feedback: feedbackMatch ? feedbackMatch[1].trim() : '',
+      instructions: proceedMatch ? proceedMatch[1].trim() : ''
+    };
+  }
+
+  async reviseImplementationPlan(agent, feedback) {
+    const revisionPrompt = `
+The human reviewer provided feedback on my implementation plan. Please revise the plan based on their input:
+
+Original Plan: ${agent.context.implementationPlan?.fullPlan || 'N/A'}
+
+Human Feedback: ${feedback}
+
+Please create a revised implementation plan that addresses the feedback and concerns raised.
+`;
+
+    const revisedPlan = await this.queryAgent(agent, revisionPrompt);
+    agent.context.implementationPlan = this.parseImplementationPlan(revisedPlan);
+    
+    // Request verification again for the revised plan
+    const developmentWorkflow = require('./developmentWorkflow');
+    await developmentWorkflow.requestOutcomeVerification(agent, agent.currentTask, agent.context.implementationPlan);
+  }
+
+  async queryAgent(agent, prompt) {
+    if (agent.type === 'claude') {
+      return await this.queryClaudeAgent(agent, prompt);
+    } else if (agent.type === 'openai') {
+      return await this.queryOpenAIAgent(agent, prompt);
+    }
+    throw new Error(`Unknown agent type: ${agent.type}`);
+  }
+
+  async queryClaudeAgent(agent, prompt) {
+    const response = await this.anthropic.messages.create({
+      model: 'claude-3-sonnet-20240229',
+      max_tokens: 4000,
+      messages: [
+        ...agent.context.conversationHistory,
+        { role: 'user', content: prompt }
+      ]
+    });
+    
+    return response.content[0].text;
+  }
+
+  async queryOpenAIAgent(agent, prompt) {
+    const response = await this.openai.chat.completions.create({
+      model: 'gpt-4',
+      max_tokens: 4000,
+      messages: [
+        ...agent.context.conversationHistory,
+        { role: 'user', content: prompt }
+      ]
+    });
+    
+    return response.choices[0].message.content;
+  }
+
+  async executeWithImplementation(agent, prompt, context) {
+    // Execute agent with implementation capabilities
+    const response = await this.queryAgent(agent, prompt);
+    const actions = this.parseActions(response);
+    const results = await this.executeActions(agent, actions);
+    
+    return {
+      message: response,
+      actions: actions,
+      results: results,
+      modifiedFiles: this.extractModifiedFiles(results),
+      summary: this.generateSummary(response, results)
+    };
+  }
+
+  extractModifiedFiles(results) {
+    const files = [];
+    for (const result of results) {
+      if (result.action.type === 'WRITE_FILE' && result.status === 'success') {
+        files.push(result.action.data.path);
+      }
+    }
+    return files;
+  }
+
+  generateSummary(response, results) {
+    const successfulActions = results.filter(r => r.status === 'success').length;
+    const totalActions = results.length;
+    
+    return `Completed ${successfulActions}/${totalActions} actions successfully. ${response.substring(0, 200)}...`;
   }
 
   getAgent(agentId) {

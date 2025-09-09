@@ -128,13 +128,37 @@ curl -X POST http://localhost:9000/tasks \
 4. Select agent type (Claude or OpenAI)
 5. Submit task
 
-### Human-in-the-Loop Workflow
+### Human-Like Development Workflow
 
-When an agent needs human input:
+AI agents work like human developers, following proper development practices:
 
-1. **Agent creates issue**: Automatically creates a Gitea issue with context
-2. **Human responds**: Add comments to the issue with guidance
-3. **Agent continues**: Processes human input and continues task
+#### 1. **Requirements Analysis**
+- Agent analyzes task requirements
+- Asks clarifying questions if unclear
+- Waits for human clarification before proceeding
+
+#### 2. **Implementation Planning**
+- Creates detailed implementation plan
+- Requests verification for complex changes
+- Gets human approval before coding
+
+#### 3. **Development Process**
+- Creates feature branch with descriptive name
+- Implements changes following approved plan
+- Adds comprehensive tests
+- Follows existing code patterns
+
+#### 4. **Pull Request & Review**
+- Creates detailed pull request
+- Links to original issue
+- Waits for human code review
+- Responds to review feedback
+- Makes requested changes
+
+#### 5. **Merge & Completion**
+- Human approves and merges PR
+- Agent updates task status
+- Cleans up if configured
 
 #### Agent Commands
 
@@ -155,7 +179,10 @@ Use these prefixes in issue comments for structured responses:
 DECISION: Choose option 2 - use TypeScript for better type safety
 CODE: Add error handling with try-catch blocks
 GUIDANCE: Focus on performance optimization first
+APPROVAL: Yes, proceed with this implementation plan
 ```
+
+**See detailed workflow:** [Development Workflow Guide](docs/DEVELOPMENT_WORKFLOW.md)
 
 ### Repository Management
 
@@ -276,12 +303,14 @@ curl http://localhost:9000/tasks/{task-id}
 ```
 
 **Agent Process:**
-1. Clones repository
-2. Analyzes existing code structure
-3. Identifies authentication patterns
-4. Implements JWT authentication
-5. Adds tests
-6. Creates pull request
+1. Analyzes requirements and asks clarifying questions
+2. Creates implementation plan and requests verification
+3. Creates feature branch: `feature/jwt-authentication`
+4. Implements JWT authentication following approved plan
+5. Adds comprehensive tests and documentation
+6. Creates pull request for human review
+7. Responds to review feedback and makes changes
+8. Waits for human approval and merge
 
 ### Example 2: Bug Fix with Human Input
 
@@ -301,8 +330,11 @@ curl http://localhost:9000/tasks/{task-id}
 2. Finds multiple possible causes
 3. Creates Gitea issue: "Need guidance on memory leak fix approach"
 4. Human reviews and comments: "DECISION: Focus on the connection pooling issue first"
-5. Agent implements fix based on human guidance
-6. Tests and commits changes
+5. Agent creates bugfix branch: `bugfix/memory-leak-connection-pool`
+6. Implements fix based on human guidance
+7. Adds tests to prevent regression
+8. Creates pull request with detailed explanation
+9. Human reviews, approves, and merges
 
 ### Example 3: Documentation Generation
 
