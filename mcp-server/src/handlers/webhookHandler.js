@@ -491,7 +491,77 @@ async function handlePushEvent(payload) {
 
 // Handle pull request events
 async function handlePullRequestEvent(payload) {
-  // Could implement PR review tasks
+  const { action, pull_request, repository } = payload;
+  
+  if (action === 'opened' || action === 'synchronize') {
+    // Trigger specialized agent reviews
+    await triggerSpecializedReviews(pull_request, repository);
+  } else if (action === 'closed' && pull_request.merged) {
+    // Handle successful merge
+    await handlePullRequestMerged(pull_request, repository);
+  }
+}
+
+// Trigger specialized agent reviews for new/updated PRs
+async function triggerSpecializedReviews(pullRequest, repository) {
+  try {
+    logger.info(`Triggering specialized reviews for PR #${pullRequest.number}`);
+    
+    // Import specialized agents service
+    const specializedAgents = require('../../agent-orchestrator/src/services/specializedAgents');
+    
+    // Start specialized reviews asynchronously
+    specializedAgents.reviewPullRequest(pullRequest, {
+      owner: repository.owner.login,
+      name: repository.name,
+      fullName: repository.full_name
+    }).catch(error => {
+      logger.error('Specialized review failed:', error);
+    });
+    
+  } catch (error) {
+    logger.error('Failed to trigger specialized reviews:', error);
+  }
+}
+
+// Handle successful PR merge
+async function handlePullRequestMerged(pullRequest, repository) {
+  try {
+    // Find related task and update status
+    const taskId = extractTaskIdFromPR(pullRequest);
+    
+    if (taskId) {
+      const axios = require('axios');
+      const config = require('../config');
+      
+      await axios.patch(`${config.agentOrchestrator.url}/tasks/${taskId}`, {
+        status: 'completed',
+        completedAt: new Date().toISOString(),
+        pullRequest: {
+          number: pullRequest.number,
+          merged: true,
+          mergedAt: pullRequest.merged_at
+        }
+      });
+      
+      logger.info(`Task ${taskId} marked as completed after PR merge`);
+    }
+  } catch (error) {
+    logger.error('Failed to handle PR merge:', error);
+  }
+}
+
+// Extract task ID from PR description or branch name
+function extractTaskIdFromPR(pullRequest) {
+  // Look for task ID in PR body
+  const bodyMatch = pullRequest.body?.match(/(?:task|resolves):\s*#?([a-zA-Z0-9-]+)/i);
+  if (bodyMatch) return bodyMatch[1];
+  
+  // Look for task ID in branch name
+  const branchMatch = pullRequest.head?.ref?.match(/task-([a-zA-Z0-9-]+)/);
+  if (branchMatch) return branchMatch[1];
+  
+  return null;
 }
 
 module.exports = router;

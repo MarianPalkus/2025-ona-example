@@ -50,6 +50,9 @@ app.use('/human-loop', require('./routes/humanLoop'));
 // Repository management
 app.use('/repositories', require('./routes/repositories'));
 
+// Specialized agents management
+app.use('/specialists', require('./routes/specialists'));
+
 // WebSocket for real-time updates
 wss.on('connection', (ws, req) => {
   logger.info('WebSocket connection established');

@@ -151,6 +151,7 @@ AI agents work like human developers, following proper development practices:
 #### 4. **Pull Request & Review**
 - Creates detailed pull request
 - Links to original issue
+- **Automatic specialist reviews** by domain experts
 - Waits for human code review
 - Responds to review feedback
 - Makes requested changes
@@ -182,7 +183,9 @@ GUIDANCE: Focus on performance optimization first
 APPROVAL: Yes, proceed with this implementation plan
 ```
 
-**See detailed workflow:** [Development Workflow Guide](docs/DEVELOPMENT_WORKFLOW.md)
+**See detailed guides:**
+- [Development Workflow Guide](docs/DEVELOPMENT_WORKFLOW.md)
+- [Specialized Agent Reviewers](docs/SPECIALIZED_AGENTS.md)
 
 ### Repository Management
 
@@ -233,17 +236,19 @@ OPENAI_RATE_LIMIT_RPM=60
 
 ### Agent Capabilities
 
-#### Claude Agent
-- Advanced reasoning and planning
-- Code architecture analysis
-- Documentation generation
-- Complex problem solving
+#### Development Agents
+- **Claude Agent**: Advanced reasoning, architecture analysis, complex problem solving
+- **OpenAI Agent**: Code completion, bug detection, performance optimization
 
-#### OpenAI Agent
-- Code completion and suggestions
-- Bug detection and fixes
-- Performance optimization
-- API integration
+#### Specialized Review Agents
+- **Software Architect** 🏗️: Architecture, design patterns, scalability
+- **Backend Developer** ⚙️: APIs, microservices, server-side logic
+- **Web Developer** 🌐: Frontend, React/Vue/Angular, UX/accessibility
+- **Mobile Developer** 📱: iOS/Android, React Native, mobile UX
+- **QA Engineer** 🧪: Testing, quality assurance, edge cases
+- **Database Specialist** 🗄️: Data modeling, query optimization, migrations
+- **Security Specialist** 🔒: Vulnerabilities, authentication, encryption
+- **DevOps Engineer** 🚀: CI/CD, deployment, infrastructure
 
 ### Development Container
 
@@ -309,8 +314,9 @@ curl http://localhost:9000/tasks/{task-id}
 4. Implements JWT authentication following approved plan
 5. Adds comprehensive tests and documentation
 6. Creates pull request for human review
-7. Responds to review feedback and makes changes
-8. Waits for human approval and merge
+7. **Automatic specialist reviews** (Backend, Security, QA experts)
+8. Responds to review feedback and makes changes
+9. Waits for human approval and merge
 
 ### Example 2: Bug Fix with Human Input
 
@@ -334,7 +340,8 @@ curl http://localhost:9000/tasks/{task-id}
 6. Implements fix based on human guidance
 7. Adds tests to prevent regression
 8. Creates pull request with detailed explanation
-9. Human reviews, approves, and merges
+9. **Automatic specialist reviews** (Backend, Security experts)
+10. Human reviews, approves, and merges
 
 ### Example 3: Documentation Generation
 
