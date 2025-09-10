@@ -1,8 +1,7 @@
 {
   "name": "agent-orchestrator",
   "version": "1.0.0",
-  "description": "AI Agent orchestrator for Claude and OpenAI with     "human-in-the-loop",
-    "dev-containers" workflow and dev containers",
+  "description": "AI Agent orchestrator for Claude and OpenAI with human-in-the-loop, dev-containers, workflow and dev containers",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
