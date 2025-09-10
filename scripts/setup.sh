@@ -158,17 +158,50 @@ setup_gitea_admin() {
         --admin \
         --must-change-password=false || true
 
-    # Generate access token
-    TOKEN=$(docker compose exec --user git gitea gitea admin user generate-access-token \
-        --username gitea-admin \
-        --token-name "ai-agent-token" \
-        --scopes "write:repository,write:issue,write:user" | grep -o 'gto_[a-zA-Z0-9]*')
+    # Generate or reuse Gitea access token
+    print_status "Ensuring Gitea access token is available..."
 
-    if [ ! -z "$TOKEN" ]; then
-        sed -i "s/GITEA_TOKEN=your_gitea_access_token/GITEA_TOKEN=$TOKEN/" .env
-        print_success "Gitea admin user created and token generated"
+    # If .env already has a non-placeholder token, skip generation
+    CURRENT_TOKEN=$(grep -E '^GITEA_TOKEN=' .env | cut -d'=' -f2-)
+    if [ -n "$CURRENT_TOKEN" ] && [ "$CURRENT_TOKEN" != "your_gitea_access_token" ]; then
+        print_success "Existing Gitea token found in .env; skipping token generation."
     else
-        print_warning "Failed to generate Gitea token automatically. Please create one manually."
+        BASE_TOKEN_NAME="ai-agent-token"
+
+        # Try to create with the base name first
+        OUTPUT=$(docker compose exec --user git gitea gitea admin user generate-access-token \
+            --username gitea-admin \
+            --token-name "$BASE_TOKEN_NAME" \
+            --scopes "write:repository,write:issue,write:user" 2>&1 || true)
+
+        TOKEN=$(echo "$OUTPUT" | grep -o 'gto_[A-Za-z0-9]\+')
+
+        # If name is already used, create a unique token name
+        if [ -z "$TOKEN" ] && echo "$OUTPUT" | grep -qi "has been used"; then
+            UNIQUE_NAME="${BASE_TOKEN_NAME}-$(date +%Y%m%d%H%M%S)"
+            print_warning "Token name '${BASE_TOKEN_NAME}' already exists. Creating '${UNIQUE_NAME}' instead."
+
+            OUTPUT=$(docker compose exec --user git gitea gitea admin user generate-access-token \
+                --username gitea-admin \
+                --token-name "$UNIQUE_NAME" \
+                --scopes "write:repository,write:issue,write:user" 2>&1 || true)
+
+            TOKEN=$(echo "$OUTPUT" | grep -o 'gto_[A-Za-z0-9]\+')
+        fi
+
+        if [ -n "$TOKEN" ]; then
+            # Portable sed for macOS (BSD) and Linux (GNU)
+            if sed --version >/dev/null 2>&1; then
+                sed -i "s|GITEA_TOKEN=your_gitea_access_token|GITEA_TOKEN=$TOKEN|" .env
+            else
+                sed -i '' "s|GITEA_TOKEN=your_gitea_access_token|GITEA_TOKEN=$TOKEN|" .env
+            fi
+            print_success "Gitea access token generated and saved to .env"
+        else
+            print_warning "Failed to generate Gitea token automatically. Please create one manually in Gitea and set GITEA_TOKEN in .env."
+            # Optional: uncomment next line to help diagnose non-sensitive errors
+            # print_warning "Token generation output: $OUTPUT"
+        fi
     fi
 }
 
@@ -234,7 +267,6 @@ main() {
     build_images
     initialize_gitea
     setup_gitea_admin
-    start_services
 
     # Wait a bit for services to fully start
     sleep 10
