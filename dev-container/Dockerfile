@@ -37,8 +37,9 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
 # Install Python 3.11
 RUN add-apt-repository ppa:deadsnakes/ppa \
     && apt-get update \
-    && apt-get install -y python3.11 python3.11-pip python3.11-venv python3.11-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y python3.11 python3.11-venv python3.11-dev python3.11-distutils \
+    && rm -rf /var/lib/apt/lists/* \
+    && curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
 # Install Go 1.21
 RUN wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz \

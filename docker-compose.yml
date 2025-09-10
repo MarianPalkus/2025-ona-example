@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Gitea Git server with issue tracking
   gitea:
@@ -121,7 +119,7 @@ networks:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: 172.22.0.0/16
 
 volumes:
   dev-container-home:

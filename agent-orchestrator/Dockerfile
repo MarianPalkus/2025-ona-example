@@ -15,14 +15,10 @@ RUN npm ci --only=production
 COPY src/ ./src/
 COPY config/ ./config/
 
-# Create non-root user
-RUN addgroup -g 1000 agent && \
-    adduser -D -s /bin/sh -u 1000 -G agent agent
+# Use existing node user (UID/GID 1000)
+RUN mkdir -p /app/logs && chown -R node:node /app
 
-# Create logs directory
-RUN mkdir -p /app/logs && chown -R agent:agent /app
-
-USER agent
+USER node
 
 EXPOSE 9000
 

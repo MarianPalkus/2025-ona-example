@@ -151,16 +151,16 @@ setup_gitea_admin() {
     print_status "Setting up Gitea admin user..."
 
     # Create admin user
-    docker compose exec gitea gitea admin user create \
-        --username admin \
+    docker compose exec --user git gitea gitea admin user create \
+        --username gitea-admin \
         --password admin123 \
         --email admin@example.com \
         --admin \
         --must-change-password=false || true
 
     # Generate access token
-    TOKEN=$(docker compose exec gitea gitea admin user generate-access-token \
-        --username admin \
+    TOKEN=$(docker compose exec --user git gitea gitea admin user generate-access-token \
+        --username gitea-admin \
         --token-name "ai-agent-token" \
         --scopes "write:repository,write:issue,write:user" | grep -o 'gto_[a-zA-Z0-9]*')
 

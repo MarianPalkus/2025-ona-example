@@ -1,8 +1,6 @@
 # Development overrides for docker-compose.yml
 # This file is automatically loaded by docker-compose and provides development-specific configurations
 
-version: '3.8'
-
 services:
   gitea:
     environment:

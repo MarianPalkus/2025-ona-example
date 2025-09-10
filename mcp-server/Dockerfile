@@ -15,14 +15,10 @@ RUN npm ci --only=production
 COPY src/ ./src/
 COPY config/ ./config/
 
-# Create non-root user
-RUN addgroup -g 1000 mcp && \
-    adduser -D -s /bin/sh -u 1000 -G mcp mcp
+# Use existing node user (UID/GID 1000)
+RUN chown -R node:node /app
 
-# Set ownership
-RUN chown -R mcp:mcp /app
-
-USER mcp
+USER node
 
 EXPOSE 8080
 
