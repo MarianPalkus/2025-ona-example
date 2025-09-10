@@ -53,6 +53,9 @@ app.use('/repositories', require('./routes/repositories'));
 // Specialized agents management
 app.use('/specialists', require('./routes/specialists'));
 
+// Dev containers management
+app.use('/dev-containers', require('./routes/devContainers'));
+
 // WebSocket for real-time updates
 wss.on('connection', (ws, req) => {
   logger.info('WebSocket connection established');

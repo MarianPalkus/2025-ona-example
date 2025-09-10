@@ -143,8 +143,10 @@ AI agents work like human developers, following proper development practices:
 - Gets human approval before coding
 
 #### 3. **Development Process**
+- **Creates isolated dev container** with proper tooling
 - Creates feature branch with descriptive name
 - Implements changes following approved plan
+- **Executes commands in container environment**
 - Adds comprehensive tests
 - Follows existing code patterns
 
@@ -186,6 +188,7 @@ APPROVAL: Yes, proceed with this implementation plan
 **See detailed guides:**
 - [Development Workflow Guide](docs/DEVELOPMENT_WORKFLOW.md)
 - [Specialized Agent Reviewers](docs/SPECIALIZED_AGENTS.md)
+- [AI Agents in Dev Containers](docs/DEV_CONTAINERS.md)
 
 ### Repository Management
 
@@ -250,13 +253,19 @@ OPENAI_RATE_LIMIT_RPM=60
 - **Security Specialist** 🔒: Vulnerabilities, authentication, encryption
 - **DevOps Engineer** 🚀: CI/CD, deployment, infrastructure
 
-### Development Container
+### Development Containers
 
-Pre-configured with:
-- **Languages**: Node.js 18, Python 3.11, Go 1.21, Rust, Java 17
-- **Tools**: Git, Docker CLI, development servers
-- **Package Managers**: npm, pip, cargo, maven
+**AI Agent Execution Environment:**
+- **Isolated Containers**: Each agent runs in dedicated dev container
+- **Auto-Configuration**: Intelligent setup based on repository analysis
+- **Language Support**: Node.js, Python, Go, Rust, Java with proper tooling
+- **Dev Containers CLI**: Uses `@devcontainers/cli` for container management
+- **Dependency Management**: Automatic installation of project dependencies
+
+**Shared Dev Environment:**
 - **SSH Access**: Port 2223 (developer/developer)
+- **Multi-Language**: Pre-configured development tools
+- **Docker-in-Docker**: Container access for complex workflows
 
 ## 📊 Monitoring
 
