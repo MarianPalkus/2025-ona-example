@@ -124,10 +124,77 @@ class AgentService {
   }
 
   async initializeWorkingEnvironment(agent, task) {
-    // Clone or update repository
+    try {
+      // Create dev container for agent execution
+      const devContainerService = require('./devContainerService');
+      const containerId = await devContainerService.createAgentContainer(agent, task);
+      
+      // Clone repository into the dev container
+      const repoPath = await devContainerService.cloneRepositoryInContainer(
+        containerId,
+        task.repository.url,
+        task.repository.branch || 'main'
+      );
+      
+      // Install dependencies in the container
+      const analysis = await devContainerService.analyzeRepository(task.repository);
+      if (analysis.packageManagers.length > 0) {
+        await devContainerService.installDependencies(containerId, analysis.packageManagers[0]);
+      }
+      
+      agent.context.workingDirectory = repoPath;
+      agent.context.containerId = containerId;
+      
+      // Analyze repository structure within the container
+      const structure = await this.analyzeRepositoryInContainer(agent, containerId);
+      agent.context.repositoryStructure = structure;
+      
+      // Load relevant files based on task
+      const relevantFiles = await this.identifyRelevantFiles(agent, task);
+      agent.context.currentFiles = relevantFiles;
+      
+      logger.info(`Initialized dev container environment for agent ${agent.id}: ${containerId}`);
+      
+    } catch (error) {
+      logger.error(`Failed to initialize working environment for agent ${agent.id}:`, error);
+      // Fallback to traditional approach if dev container fails
+      await this.initializeFallbackEnvironment(agent, task);
+    }
+  }
+
+  async analyzeRepositoryInContainer(agent, containerId) {
+    try {
+      const devContainerService = require('./devContainerService');
+      
+      // Get repository structure
+      const lsResult = await devContainerService.executeInContainer(
+        containerId,
+        'find /workspace/repository -type f -name "*.js" -o -name "*.ts" -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.java" | head -20'
+      );
+      
+      // Get package files
+      const packageResult = await devContainerService.executeInContainer(
+        containerId,
+        'find /workspace/repository -name "package.json" -o -name "requirements.txt" -o -name "Cargo.toml" -o -name "pom.xml" -o -name "go.mod"'
+      );
+      
+      return {
+        files: lsResult.stdout.split('\n').filter(f => f.trim()),
+        packageFiles: packageResult.stdout.split('\n').filter(f => f.trim()),
+        analyzedAt: new Date()
+      };
+      
+    } catch (error) {
+      logger.error('Failed to analyze repository in container:', error);
+      return { files: [], packageFiles: [], error: error.message };
+    }
+  }
+
+  async initializeFallbackEnvironment(agent, task) {
+    // Fallback to original MCP client approach
     const repoPath = await mcpClient.cloneRepository(
-      agent.repositoryInfo.url,
-      agent.repositoryInfo.branch || 'main'
+      task.repository.url,
+      task.repository.branch || 'main'
     );
     
     agent.context.workingDirectory = repoPath;
@@ -140,7 +207,7 @@ class AgentService {
     const relevantFiles = await this.identifyRelevantFiles(agent, task);
     agent.context.currentFiles = relevantFiles;
     
-    logger.info(`Initialized working environment for agent ${agent.id}`);
+    logger.info(`Initialized fallback environment for agent ${agent.id}`);
   }
 
   async identifyRelevantFiles(agent, task) {
@@ -361,25 +428,64 @@ Always explain your reasoning and next steps.`;
       try {
         let result;
         
+        // Use dev container if available, otherwise fallback to MCP client
+        const useDevContainer = agent.context.containerId && agent.context.devContainer;
+        
         switch (action.type) {
           case 'READ_FILE':
-            result = await mcpClient.readFile(action.data.path);
+            if (useDevContainer) {
+              result = await this.readFileInContainer(agent, action.data.path);
+            } else {
+              result = await mcpClient.readFile(action.data.path);
+            }
             break;
             
           case 'WRITE_FILE':
-            result = await mcpClient.writeFile(action.data.path, action.data.content);
+            if (useDevContainer) {
+              result = await this.writeFileInContainer(agent, action.data.path, action.data.content);
+            } else {
+              result = await mcpClient.writeFile(action.data.path, action.data.content);
+            }
             break;
             
           case 'EXECUTE_COMMAND':
-            result = await mcpClient.executeCommand(action.data.command, agent.context.workingDirectory);
+            if (useDevContainer) {
+              result = await this.executeCommandInContainer(agent, action.data.command);
+            } else {
+              result = await mcpClient.executeCommand(action.data.command, agent.context.workingDirectory);
+            }
             break;
             
           case 'GIT_OPERATION':
-            result = await mcpClient.gitOperation(action.data.operation, action.data.params);
+            if (useDevContainer) {
+              result = await this.executeGitInContainer(agent, action.data.operation, action.data.params);
+            } else {
+              result = await mcpClient.gitOperation(action.data.operation, action.data.params);
+            }
             break;
             
           case 'SEARCH_CODE':
-            result = await mcpClient.searchCode(action.data.pattern, agent.context.workingDirectory);
+            if (useDevContainer) {
+              result = await this.searchCodeInContainer(agent, action.data.pattern);
+            } else {
+              result = await mcpClient.searchCode(action.data.pattern, agent.context.workingDirectory);
+            }
+            break;
+            
+          case 'RUN_TESTS':
+            if (useDevContainer) {
+              result = await this.runTestsInContainer(agent, action.data.testCommand);
+            } else {
+              result = await mcpClient.executeCommand(action.data.testCommand || 'npm test', agent.context.workingDirectory);
+            }
+            break;
+            
+          case 'INSTALL_DEPENDENCIES':
+            if (useDevContainer) {
+              result = await this.installDependenciesInContainer(agent, action.data.packageManager);
+            } else {
+              result = await mcpClient.executeCommand('npm install', agent.context.workingDirectory);
+            }
             break;
             
           case 'REQUEST_HUMAN_INPUT':
@@ -408,6 +514,95 @@ Always explain your reasoning and next steps.`;
     }
 
     return results;
+  }
+
+  async readFileInContainer(agent, filePath) {
+    const devContainerService = require('./devContainerService');
+    const command = `cat "/workspace/repository/${filePath}"`;
+    const result = await devContainerService.executeInContainer(agent.context.containerId, command);
+    
+    if (result.exitCode !== 0) {
+      throw new Error(`Failed to read file: ${result.stderr}`);
+    }
+    
+    return { content: result.stdout, path: filePath };
+  }
+
+  async writeFileInContainer(agent, filePath, content) {
+    const devContainerService = require('./devContainerService');
+    
+    // Escape content for shell
+    const escapedContent = content.replace(/'/g, "'\"'\"'");
+    const command = `echo '${escapedContent}' > "/workspace/repository/${filePath}"`;
+    
+    const result = await devContainerService.executeInContainer(agent.context.containerId, command);
+    
+    if (result.exitCode !== 0) {
+      throw new Error(`Failed to write file: ${result.stderr}`);
+    }
+    
+    return { path: filePath, written: true };
+  }
+
+  async executeCommandInContainer(agent, command) {
+    const devContainerService = require('./devContainerService');
+    const fullCommand = `cd /workspace/repository && ${command}`;
+    
+    return await devContainerService.executeInContainer(agent.context.containerId, fullCommand);
+  }
+
+  async executeGitInContainer(agent, operation, params) {
+    const devContainerService = require('./devContainerService');
+    let gitCommand;
+    
+    switch (operation) {
+      case 'add':
+        gitCommand = `git add ${params.files ? params.files.join(' ') : '.'}`;
+        break;
+      case 'commit':
+        gitCommand = `git commit -m "${params.message}"`;
+        break;
+      case 'push':
+        gitCommand = `git push origin ${params.branch || 'HEAD'}`;
+        break;
+      case 'checkout':
+        gitCommand = `git checkout ${params.branch}`;
+        break;
+      case 'create_branch':
+        gitCommand = `git checkout -b ${params.branchName}`;
+        break;
+      case 'status':
+        gitCommand = 'git status --porcelain';
+        break;
+      default:
+        throw new Error(`Unknown git operation: ${operation}`);
+    }
+    
+    const fullCommand = `cd /workspace/repository && ${gitCommand}`;
+    return await devContainerService.executeInContainer(agent.context.containerId, fullCommand);
+  }
+
+  async searchCodeInContainer(agent, pattern) {
+    const devContainerService = require('./devContainerService');
+    const command = `cd /workspace/repository && grep -r "${pattern}" --include="*.js" --include="*.ts" --include="*.py" --include="*.go" --include="*.rs" --include="*.java" . || true`;
+    
+    const result = await devContainerService.executeInContainer(agent.context.containerId, command);
+    
+    return {
+      pattern: pattern,
+      matches: result.stdout.split('\n').filter(line => line.trim()),
+      searchedAt: new Date()
+    };
+  }
+
+  async runTestsInContainer(agent, testCommand = 'npm test') {
+    const devContainerService = require('./devContainerService');
+    return await devContainerService.runTests(agent.context.containerId, testCommand);
+  }
+
+  async installDependenciesInContainer(agent, packageManager = 'npm') {
+    const devContainerService = require('./devContainerService');
+    return await devContainerService.installDependencies(agent.context.containerId, packageManager);
   }
 
   requiresHumanInput(message, results) {
@@ -671,6 +866,17 @@ Please create a revised implementation plan that addresses the feedback and conc
   async terminateAgent(agentId) {
     const agent = this.activeAgents.get(agentId);
     if (agent) {
+      // Clean up dev container if it exists
+      if (agent.context.containerId) {
+        try {
+          const devContainerService = require('./devContainerService');
+          await devContainerService.stopContainer(agent.context.containerId);
+          logger.info(`Cleaned up dev container for agent ${agentId}: ${agent.context.containerId}`);
+        } catch (error) {
+          logger.error(`Failed to cleanup dev container for agent ${agentId}:`, error);
+        }
+      }
+      
       agent.status = 'terminated';
       this.activeAgents.delete(agentId);
       logger.info(`Terminated agent: ${agentId}`);
