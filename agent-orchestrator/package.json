@@ -38,8 +38,8 @@
     "claude",
     "openai",
     "orchestrator",
-    "    "human-in-the-loop",
-    "dev-containers""
+    "human-in-the-loop",
+    "dev-containers"
   ],
   "author": "AI Agent Development Team",
   "license": "MIT"
