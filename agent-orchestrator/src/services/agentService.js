@@ -1,7 +1,6 @@
 const Anthropic = require('@anthropic-ai/sdk');
 const OpenAI = require('openai');
 const logger = require('../utils/logger');
-const config = require('../config');
 const mcpClient = require('./mcpClient');
 const humanLoopService = require('./humanLoopService');
 
@@ -10,17 +9,17 @@ class AgentService {
     this.anthropic = new Anthropic({
       apiKey: process.env.ANTHROPIC_API_KEY,
     });
-    
+
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
     });
-    
+
     this.activeAgents = new Map();
   }
 
   async createAgent(type, taskId, repositoryInfo) {
     const agentId = `${type}_${taskId}_${Date.now()}`;
-    
+
     const agent = {
       id: agentId,
       type: type,
@@ -36,10 +35,10 @@ class AgentService {
       capabilities: this.getAgentCapabilities(type),
       createdAt: new Date()
     };
-    
+
     this.activeAgents.set(agentId, agent);
     logger.info(`Created ${type} agent: ${agentId}`);
-    
+
     return agent;
   }
 
@@ -100,7 +99,7 @@ class AgentService {
 
       agent.status = 'completed';
       logger.info(`Agent ${agent.id} completed task`);
-      
+
       return result;
     } catch (error) {
       agent.status = 'failed';
@@ -118,7 +117,7 @@ class AgentService {
       'test', 'unit test', 'integration', 'authentication',
       'security', 'performance', 'migration', 'update'
     ];
-    
+
     const description = task.description.toLowerCase();
     return codeIndicators.some(indicator => description.includes(indicator));
   }
@@ -128,33 +127,33 @@ class AgentService {
       // Create dev container for agent execution
       const devContainerService = require('./devContainerService');
       const containerId = await devContainerService.createAgentContainer(agent, task);
-      
+
       // Clone repository into the dev container
       const repoPath = await devContainerService.cloneRepositoryInContainer(
         containerId,
         task.repository.url,
         task.repository.branch || 'main'
       );
-      
+
       // Install dependencies in the container
       const analysis = await devContainerService.analyzeRepository(task.repository);
       if (analysis.packageManagers.length > 0) {
         await devContainerService.installDependencies(containerId, analysis.packageManagers[0]);
       }
-      
+
       agent.context.workingDirectory = repoPath;
       agent.context.containerId = containerId;
-      
+
       // Analyze repository structure within the container
       const structure = await this.analyzeRepositoryInContainer(agent, containerId);
       agent.context.repositoryStructure = structure;
-      
+
       // Load relevant files based on task
       const relevantFiles = await this.identifyRelevantFiles(agent, task);
       agent.context.currentFiles = relevantFiles;
-      
+
       logger.info(`Initialized dev container environment for agent ${agent.id}: ${containerId}`);
-      
+
     } catch (error) {
       logger.error(`Failed to initialize working environment for agent ${agent.id}:`, error);
       // Fallback to traditional approach if dev container fails
@@ -165,25 +164,25 @@ class AgentService {
   async analyzeRepositoryInContainer(agent, containerId) {
     try {
       const devContainerService = require('./devContainerService');
-      
+
       // Get repository structure
       const lsResult = await devContainerService.executeInContainer(
         containerId,
         'find /workspace/repository -type f -name "*.js" -o -name "*.ts" -o -name "*.py" -o -name "*.go" -o -name "*.rs" -o -name "*.java" | head -20'
       );
-      
+
       // Get package files
       const packageResult = await devContainerService.executeInContainer(
         containerId,
         'find /workspace/repository -name "package.json" -o -name "requirements.txt" -o -name "Cargo.toml" -o -name "pom.xml" -o -name "go.mod"'
       );
-      
+
       return {
         files: lsResult.stdout.split('\n').filter(f => f.trim()),
         packageFiles: packageResult.stdout.split('\n').filter(f => f.trim()),
         analyzedAt: new Date()
       };
-      
+
     } catch (error) {
       logger.error('Failed to analyze repository in container:', error);
       return { files: [], packageFiles: [], error: error.message };
@@ -196,24 +195,24 @@ class AgentService {
       task.repository.url,
       task.repository.branch || 'main'
     );
-    
+
     agent.context.workingDirectory = repoPath;
-    
+
     // Analyze repository structure
     const structure = await mcpClient.analyzeRepository(repoPath);
     agent.context.repositoryStructure = structure;
-    
+
     // Load relevant files based on task
     const relevantFiles = await this.identifyRelevantFiles(agent, task);
     agent.context.currentFiles = relevantFiles;
-    
+
     logger.info(`Initialized fallback environment for agent ${agent.id}`);
   }
 
   async identifyRelevantFiles(agent, task) {
     const keywords = this.extractKeywords(task.description);
     const files = await mcpClient.searchFiles(agent.context.workingDirectory, keywords);
-    
+
     // Limit to most relevant files to avoid context overflow
     return files.slice(0, 10);
   }
@@ -245,7 +244,7 @@ class AgentService {
         });
 
         const assistantMessage = response.content[0].text;
-        
+
         // Parse and execute actions from Claude's response
         const actions = this.parseActions(assistantMessage);
         const results = await this.executeActions(agent, actions);
@@ -272,11 +271,11 @@ class AgentService {
       } catch (error) {
         attempts++;
         logger.error(`Claude execution attempt ${attempts} failed:`, error);
-        
+
         if (attempts >= maxAttempts) {
           throw error;
         }
-        
+
         // Wait before retry
         await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
       }
@@ -303,7 +302,7 @@ class AgentService {
         });
 
         const assistantMessage = response.choices[0].message.content;
-        
+
         // Parse and execute actions
         const actions = this.parseActions(assistantMessage);
         const results = await this.executeActions(agent, actions);
@@ -330,11 +329,11 @@ class AgentService {
       } catch (error) {
         attempts++;
         logger.error(`OpenAI execution attempt ${attempts} failed:`, error);
-        
+
         if (attempts >= maxAttempts) {
           throw error;
         }
-        
+
         await new Promise(resolve => setTimeout(resolve, 1000 * attempts));
       }
     }
@@ -380,21 +379,21 @@ Always explain your reasoning and next steps.`;
 
   buildUserPrompt(agent, task) {
     let prompt = `Please work on the following task: ${task.description}\n\n`;
-    
+
     if (agent.context.repositoryStructure) {
       prompt += `Repository Structure:\n${JSON.stringify(agent.context.repositoryStructure, null, 2)}\n\n`;
     }
-    
+
     if (agent.context.currentFiles.length > 0) {
       prompt += `Relevant Files:\n${agent.context.currentFiles.map(f => `- ${f}`).join('\n')}\n\n`;
     }
-    
+
     if (task.additionalContext) {
       prompt += `Additional Context:\n${task.additionalContext}\n\n`;
     }
-    
+
     prompt += 'Please analyze the situation and proceed with the task.';
-    
+
     return prompt;
   }
 
@@ -406,7 +405,7 @@ Always explain your reasoning and next steps.`;
     while ((match = actionRegex.exec(message)) !== null) {
       const actionType = match[1];
       const actionContent = match[2].trim();
-      
+
       try {
         const actionData = JSON.parse(actionContent);
         actions.push({
@@ -427,10 +426,10 @@ Always explain your reasoning and next steps.`;
     for (const action of actions) {
       try {
         let result;
-        
+
         // Use dev container if available, otherwise fallback to MCP client
         const useDevContainer = agent.context.containerId && agent.context.devContainer;
-        
+
         switch (action.type) {
           case 'READ_FILE':
             if (useDevContainer) {
@@ -439,7 +438,7 @@ Always explain your reasoning and next steps.`;
               result = await mcpClient.readFile(action.data.path);
             }
             break;
-            
+
           case 'WRITE_FILE':
             if (useDevContainer) {
               result = await this.writeFileInContainer(agent, action.data.path, action.data.content);
@@ -447,7 +446,7 @@ Always explain your reasoning and next steps.`;
               result = await mcpClient.writeFile(action.data.path, action.data.content);
             }
             break;
-            
+
           case 'EXECUTE_COMMAND':
             if (useDevContainer) {
               result = await this.executeCommandInContainer(agent, action.data.command);
@@ -455,7 +454,7 @@ Always explain your reasoning and next steps.`;
               result = await mcpClient.executeCommand(action.data.command, agent.context.workingDirectory);
             }
             break;
-            
+
           case 'GIT_OPERATION':
             if (useDevContainer) {
               result = await this.executeGitInContainer(agent, action.data.operation, action.data.params);
@@ -463,7 +462,7 @@ Always explain your reasoning and next steps.`;
               result = await mcpClient.gitOperation(action.data.operation, action.data.params);
             }
             break;
-            
+
           case 'SEARCH_CODE':
             if (useDevContainer) {
               result = await this.searchCodeInContainer(agent, action.data.pattern);
@@ -471,7 +470,7 @@ Always explain your reasoning and next steps.`;
               result = await mcpClient.searchCode(action.data.pattern, agent.context.workingDirectory);
             }
             break;
-            
+
           case 'RUN_TESTS':
             if (useDevContainer) {
               result = await this.runTestsInContainer(agent, action.data.testCommand);
@@ -479,7 +478,7 @@ Always explain your reasoning and next steps.`;
               result = await mcpClient.executeCommand(action.data.testCommand || 'npm test', agent.context.workingDirectory);
             }
             break;
-            
+
           case 'INSTALL_DEPENDENCIES':
             if (useDevContainer) {
               result = await this.installDependenciesInContainer(agent, action.data.packageManager);
@@ -487,22 +486,22 @@ Always explain your reasoning and next steps.`;
               result = await mcpClient.executeCommand('npm install', agent.context.workingDirectory);
             }
             break;
-            
+
           case 'REQUEST_HUMAN_INPUT':
             // This will be handled separately
             result = { status: 'human_input_requested' };
             break;
-            
+
           default:
             throw new Error(`Unknown action type: ${action.type}`);
         }
-        
+
         results.push({
           action: action,
           result: result,
           status: 'success'
         });
-        
+
       } catch (error) {
         logger.error(`Action execution failed:`, error);
         results.push({
@@ -520,41 +519,41 @@ Always explain your reasoning and next steps.`;
     const devContainerService = require('./devContainerService');
     const command = `cat "/workspace/repository/${filePath}"`;
     const result = await devContainerService.executeInContainer(agent.context.containerId, command);
-    
+
     if (result.exitCode !== 0) {
       throw new Error(`Failed to read file: ${result.stderr}`);
     }
-    
+
     return { content: result.stdout, path: filePath };
   }
 
   async writeFileInContainer(agent, filePath, content) {
     const devContainerService = require('./devContainerService');
-    
+
     // Escape content for shell
     const escapedContent = content.replace(/'/g, "'\"'\"'");
     const command = `echo '${escapedContent}' > "/workspace/repository/${filePath}"`;
-    
+
     const result = await devContainerService.executeInContainer(agent.context.containerId, command);
-    
+
     if (result.exitCode !== 0) {
       throw new Error(`Failed to write file: ${result.stderr}`);
     }
-    
+
     return { path: filePath, written: true };
   }
 
   async executeCommandInContainer(agent, command) {
     const devContainerService = require('./devContainerService');
     const fullCommand = `cd /workspace/repository && ${command}`;
-    
+
     return await devContainerService.executeInContainer(agent.context.containerId, fullCommand);
   }
 
   async executeGitInContainer(agent, operation, params) {
     const devContainerService = require('./devContainerService');
     let gitCommand;
-    
+
     switch (operation) {
       case 'add':
         gitCommand = `git add ${params.files ? params.files.join(' ') : '.'}`;
@@ -577,7 +576,7 @@ Always explain your reasoning and next steps.`;
       default:
         throw new Error(`Unknown git operation: ${operation}`);
     }
-    
+
     const fullCommand = `cd /workspace/repository && ${gitCommand}`;
     return await devContainerService.executeInContainer(agent.context.containerId, fullCommand);
   }
@@ -585,9 +584,9 @@ Always explain your reasoning and next steps.`;
   async searchCodeInContainer(agent, pattern) {
     const devContainerService = require('./devContainerService');
     const command = `cd /workspace/repository && grep -r "${pattern}" --include="*.js" --include="*.ts" --include="*.py" --include="*.go" --include="*.rs" --include="*.java" . || true`;
-    
+
     const result = await devContainerService.executeInContainer(agent.context.containerId, command);
-    
+
     return {
       pattern: pattern,
       matches: result.stdout.split('\n').filter(line => line.trim()),
@@ -610,13 +609,13 @@ Always explain your reasoning and next steps.`;
     if (message.includes('REQUEST_HUMAN_INPUT') || message.includes('human input')) {
       return true;
     }
-    
+
     // Check if any actions failed that might need human intervention
     const failedActions = results.filter(r => r.status === 'failed');
     if (failedActions.length > 0) {
       return true;
     }
-    
+
     // Check for uncertainty indicators in the message
     const uncertaintyIndicators = [
       'not sure',
@@ -626,8 +625,8 @@ Always explain your reasoning and next steps.`;
       'which approach',
       'need guidance'
     ];
-    
-    return uncertaintyIndicators.some(indicator => 
+
+    return uncertaintyIndicators.some(indicator =>
       message.toLowerCase().includes(indicator)
     );
   }
@@ -670,12 +669,12 @@ Always explain your reasoning and next steps.`;
   assessUrgency(message, results) {
     const failedActions = results.filter(r => r.status === 'failed');
     if (failedActions.length > 0) return 'high';
-    
+
     const urgencyKeywords = ['urgent', 'critical', 'blocking', 'error', 'failed'];
     if (urgencyKeywords.some(keyword => message.toLowerCase().includes(keyword))) {
       return 'high';
     }
-    
+
     return 'medium';
   }
 
@@ -713,7 +712,7 @@ Always explain your reasoning and next steps.`;
     // Parse clarification answers and update task context
     const answers = this.parseAnswers(response.content);
     agent.context.clarificationAnswers = answers;
-    
+
     // Continue with development workflow
     const developmentWorkflow = require('./developmentWorkflow');
     await developmentWorkflow.continueAfterClarification(agent, answers);
@@ -723,7 +722,7 @@ Always explain your reasoning and next steps.`;
     // Parse verification response (approval/feedback)
     const verification = this.parseVerification(response.content);
     agent.context.verificationResponse = verification;
-    
+
     if (verification.approved) {
       // Continue with implementation
       const developmentWorkflow = require('./developmentWorkflow');
@@ -744,16 +743,16 @@ Always explain your reasoning and next steps.`;
     const answers = {};
     const answerRegex = /ANSWER\s+(\d+):\s*(.+?)(?=ANSWER\s+\d+:|$)/gis;
     let match;
-    
+
     while ((match = answerRegex.exec(content)) !== null) {
       answers[parseInt(match[1])] = match[2].trim();
     }
-    
+
     // If no structured answers found, treat entire content as general answer
     if (Object.keys(answers).length === 0) {
       answers[1] = content;
     }
-    
+
     return answers;
   }
 
@@ -761,7 +760,7 @@ Always explain your reasoning and next steps.`;
     const approvalMatch = content.match(/APPROVAL:\s*(Yes|No)/i);
     const feedbackMatch = content.match(/FEEDBACK:\s*(.+?)(?=PROCEED:|$)/is);
     const proceedMatch = content.match(/PROCEED:\s*(.+?)$/is);
-    
+
     return {
       approved: approvalMatch ? approvalMatch[1].toLowerCase() === 'yes' : false,
       feedback: feedbackMatch ? feedbackMatch[1].trim() : '',
@@ -782,7 +781,7 @@ Please create a revised implementation plan that addresses the feedback and conc
 
     const revisedPlan = await this.queryAgent(agent, revisionPrompt);
     agent.context.implementationPlan = this.parseImplementationPlan(revisedPlan);
-    
+
     // Request verification again for the revised plan
     const developmentWorkflow = require('./developmentWorkflow');
     await developmentWorkflow.requestOutcomeVerification(agent, agent.currentTask, agent.context.implementationPlan);
@@ -806,7 +805,7 @@ Please create a revised implementation plan that addresses the feedback and conc
         { role: 'user', content: prompt }
       ]
     });
-    
+
     return response.content[0].text;
   }
 
@@ -819,7 +818,7 @@ Please create a revised implementation plan that addresses the feedback and conc
         { role: 'user', content: prompt }
       ]
     });
-    
+
     return response.choices[0].message.content;
   }
 
@@ -828,7 +827,7 @@ Please create a revised implementation plan that addresses the feedback and conc
     const response = await this.queryAgent(agent, prompt);
     const actions = this.parseActions(response);
     const results = await this.executeActions(agent, actions);
-    
+
     return {
       message: response,
       actions: actions,
@@ -851,7 +850,7 @@ Please create a revised implementation plan that addresses the feedback and conc
   generateSummary(response, results) {
     const successfulActions = results.filter(r => r.status === 'success').length;
     const totalActions = results.length;
-    
+
     return `Completed ${successfulActions}/${totalActions} actions successfully. ${response.substring(0, 200)}...`;
   }
 
@@ -876,7 +875,7 @@ Please create a revised implementation plan that addresses the feedback and conc
           logger.error(`Failed to cleanup dev container for agent ${agentId}:`, error);
         }
       }
-      
+
       agent.status = 'terminated';
       this.activeAgents.delete(agentId);
       logger.info(`Terminated agent: ${agentId}`);
