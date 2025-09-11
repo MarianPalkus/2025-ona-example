@@ -8,13 +8,13 @@ A comprehensive Docker Compose-based setup for AI agents (Claude, OpenAI) to wor
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Web UI        │    │ Agent            │    │ MCP Git         │
 │   (Port 4000)   │◄──►│ Orchestrator     │◄──►│ Server          │
-│                 │    │ (Port 9000)      │    │ (Port 8080)     │
+│                 │    │ (Port 9000)      │    │ (Port 8089)     │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
                                 │                        │
                                 ▼                        ▼
                        ┌─────────────────┐    ┌─────────────────┐
                        │ Dev Container   │    │ Gitea Server    │
-                       │ (SSH: 2223)     │    │ (Port 3001)     │
+                       │ (SSH: 2223)     │    │ (Port 3030)     │
                        │ (Ports 3000+)   │    │ Issues & Repos  │
                        └─────────────────┘    └─────────────────┘
                                 │                        │
@@ -69,7 +69,7 @@ docker-compose restart agent-orchestrator
 ### 4. Access Services
 
 - **Web UI**: [http://localhost:4000](http://localhost:4000)
-- **Gitea**: [http://localhost:3001](http://localhost:3001) (admin/admin123)
+- **Gitea**: [http://localhost:3030](http://localhost:3030) (admin/admin123)
 - **Agent API**: [http://localhost:9000](http://localhost:9000)
 - **Dev Container**: `ssh developer@localhost -p 2223` (password: developer)
 
@@ -195,7 +195,7 @@ APPROVAL: Yes, proceed with this implementation plan
 #### Clone Repository
 
 ```bash
-curl -X POST http://localhost:8080/git/clone \
+curl -X POST http://localhost:8089/git/clone \
   -H "Content-Type: application/json" \
   -d '{
     "url": "https://github.com/user/repo.git",
@@ -206,7 +206,7 @@ curl -X POST http://localhost:8080/git/clone \
 #### Create Repository in Gitea
 
 ```bash
-curl -X POST http://localhost:8080/gitea/repositories \
+curl -X POST http://localhost:8089/gitea/repositories \
   -H "Content-Type: application/json" \
   -d '{
     "name": "my-project",
@@ -442,7 +442,7 @@ docker-compose build --no-cache
 
 #### Human Input Not Working
 
-1. **Verify Gitea**: Check if accessible at localhost:3001
+1. **Verify Gitea**: Check if accessible at localhost:3030
 2. **Check webhooks**: Verify webhook configuration
 3. **Review issue format**: Ensure proper response format
 

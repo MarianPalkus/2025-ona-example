@@ -55,9 +55,9 @@ The system automatically configures containers based on repository analysis:
 ```javascript
 // Adds framework-specific tools and extensions
 - React → React extensions, port 3000
-- Vue → Vue extensions, port 8080
+- Vue → Vue extensions, port 8089
 - Django → Django tools, port 8000
-- Spring → Maven/Gradle, port 8080
+- Spring → Maven/Gradle, port 8089
 ```
 
 #### **Tool Integration**
@@ -138,7 +138,7 @@ AI agents execute commands directly in the dev container:
       ]
     }
   },
-  "forwardPorts": [3000, 3001],
+  "forwardPorts": [3000, 3030],
   "postCreateCommand": "npm install -g typescript ts-node nodemon",
   "workspaceFolder": "/workspace"
 }
@@ -186,7 +186,7 @@ AI agents execute commands directly in the dev container:
       ]
     }
   },
-  "forwardPorts": [8080, 8090],
+  "forwardPorts": [8089, 8090],
   "workspaceFolder": "/workspace"
 }
 ```

@@ -131,7 +131,7 @@ initialize_gitea() {
     max_attempts=30
     attempt=1
     while [ $attempt -le $max_attempts ]; do
-        if curl -s http://localhost:3001 > /dev/null; then
+        if curl -s http://localhost:3030 > /dev/null; then
             print_success "Gitea is ready"
             break
         fi
@@ -200,7 +200,7 @@ setup_gitea_admin() {
         else
             print_warning "Failed to generate Gitea token automatically. Please create one manually in Gitea and set GITEA_TOKEN in .env."
             # Optional: uncomment next line to help diagnose non-sensitive errors
-            # print_warning "Token generation output: $OUTPUT"
+             print_warning "Token generation output: $OUTPUT"
         fi
     fi
 }
@@ -219,7 +219,7 @@ verify_installation() {
     print_status "Verifying installation..."
 
     # Check service health
-    services=("gitea:3001" "mcp-git-server:8080" "agent-orchestrator:9000" "web-ui:4000")
+    services=("gitea:3030" "mcp-git-server:8089" "agent-orchestrator:9000" "web-ui:4000")
 
     for service in "${services[@]}"; do
         name=$(echo $service | cut -d: -f1)
@@ -239,9 +239,9 @@ print_access_info() {
     echo "🎉 Setup completed! Access your services:"
     echo ""
     echo "📊 Web UI:           http://localhost:4000"
-    echo "🔧 Gitea:            http://localhost:3001"
+    echo "🔧 Gitea:            http://localhost:3030"
     echo "🤖 Agent API:        http://localhost:9000"
-    echo "🔌 MCP Server:       http://localhost:8080"
+    echo "🔌 MCP Server:       http://localhost:8089"
     echo "💻 Dev Container:    ssh developer@localhost -p 2223 (password: developer)"
     echo ""
     echo "📝 Default Gitea credentials:"

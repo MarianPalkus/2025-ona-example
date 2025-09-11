@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 4000;
 
 // Environment variables
 const AGENT_ORCHESTRATOR_URL = process.env.AGENT_ORCHESTRATOR_URL || 'http://localhost:9000';
-const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:8080';
+const MCP_SERVER_URL = process.env.MCP_SERVER_URL || 'http://localhost:8089';
 
 // Middleware
 app.use(cors());
@@ -57,10 +57,10 @@ app.get('/', (req, res) => {
                 <div class="service-card">
                     <h3>🔧 Gitea Git Server</h3>
                     <p>Version control system with issue tracking</p>
-                    <a href="http://localhost:3001" class="service-link" target="_blank">Open Gitea →</a>
+                    <a href="http://localhost:3030" class="service-link" target="_blank">Open Gitea →</a>
                     <div class="status">
                         <span class="status-indicator status-healthy"></span>
-                        <span>Running on port 3001</span>
+                        <span>Running on port 3030</span>
                     </div>
                 </div>
                 
@@ -70,7 +70,7 @@ app.get('/', (req, res) => {
                     <a href="${MCP_SERVER_URL}" class="service-link" target="_blank">Open MCP Server →</a>
                     <div class="status">
                         <span class="status-indicator status-healthy"></span>
-                        <span>Running on port 8080</span>
+                        <span>Running on port 8089</span>
                     </div>
                 </div>
                 
@@ -110,7 +110,7 @@ app.get('/', (req, res) => {
 app.get('/api/status', (req, res) => {
   res.json({
     services: [
-      { name: 'gitea', url: 'http://localhost:3001', status: 'running' },
+      { name: 'gitea', url: 'http://localhost:3030', status: 'running' },
       { name: 'mcp-server', url: MCP_SERVER_URL, status: 'running' },
       { name: 'agent-orchestrator', url: AGENT_ORCHESTRATOR_URL, status: 'running' },
       { name: 'dev-container', url: 'ssh://localhost:2223', status: 'running' }

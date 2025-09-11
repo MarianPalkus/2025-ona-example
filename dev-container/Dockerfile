@@ -130,7 +130,7 @@ COPY --chown=developer:developer config/ /workspace/config/
 USER root
 
 # Expose SSH port and development server ports
-EXPOSE 22 3000 3001 3002 3003 3004 3005 8000 8001 8002 8003 8004 8005
+EXPOSE 22 3000 3030 3002 3030 3004 3005 8000 8001 8002 8003 8004 8005
 
 # Create startup script
 COPY start.sh /start.sh

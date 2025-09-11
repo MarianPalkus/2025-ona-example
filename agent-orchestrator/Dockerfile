@@ -9,7 +9,7 @@ RUN apk add --no-cache git curl
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci # Use --only=production when docker image is not used to run npm dev
 
 # Copy source code
 COPY src/ ./src/

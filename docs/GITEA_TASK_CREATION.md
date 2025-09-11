@@ -347,7 +347,7 @@ You can create custom labels for organization:
 Enable webhooks in your Gitea repository:
 
 1. Go to **Settings** → **Webhooks**
-2. Add webhook URL: `http://mcp-git-server:8080/webhooks/gitea`
+2. Add webhook URL: `http://mcp-git-server:8089/webhooks/gitea`
 3. Select events: `Issues`, `Issue Comments`, `Push`, `Pull Requests`
 4. Set secret to match `GITEA_WEBHOOK_SECRET` in `.env`
 

@@ -156,7 +156,7 @@ process.on('SIGTERM', () => {
   });
 });
 
-const PORT = process.env.MCP_PORT || 8080;
+const PORT = process.env.MCP_PORT || 8089;
 server.listen(PORT, () => {
   logger.info(`MCP Git Server listening on port ${PORT}`);
   logger.info(`Gitea URL: ${config.gitea.url}`);

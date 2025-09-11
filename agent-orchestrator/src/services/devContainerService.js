@@ -309,11 +309,11 @@ class DevContainerService {
     const ports = [3000, 8000]; // Common development ports
 
     if (analysis.frameworks.includes('react')) {
-      ports.push(3000, 3001);
+      ports.push(3000, 3030);
     }
 
     if (analysis.frameworks.includes('vue')) {
-      ports.push(8080, 8081);
+      ports.push(8089, 8081);
     }
 
     if (analysis.frameworks.includes('django')) {
@@ -325,7 +325,7 @@ class DevContainerService {
     }
 
     if (analysis.frameworks.includes('spring')) {
-      ports.push(8080, 8090);
+      ports.push(8089, 8090);
     }
 
     return [...new Set(ports)]; // Remove duplicates

@@ -313,13 +313,13 @@ Set up webhooks for automatic task creation:
 
 ```bash
 # Configure webhook in Gitea
-curl -X POST http://localhost:3001/api/v1/repos/user/repo/hooks \
+curl -X POST http://localhost:3030/api/v1/repos/user/repo/hooks \
   -H "Authorization: token $GITEA_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "gitea",
     "config": {
-      "url": "http://mcp-git-server:8080/webhooks/gitea",
+      "url": "http://mcp-git-server:8089/webhooks/gitea",
       "content_type": "json"
     },
     "events": ["issues", "issue_comment", "push"],
@@ -430,10 +430,10 @@ docker-compose restart agent-orchestrator
 #### Human Input Not Working
 ```bash
 # Check Gitea connectivity
-curl http://localhost:3001
+curl http://localhost:3030
 
 # Verify webhook configuration
-curl http://localhost:8080/health
+curl http://localhost:8089/health
 
 # Check issue creation logs
 docker-compose logs mcp-git-server | grep "issue"

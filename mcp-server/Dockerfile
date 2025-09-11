@@ -9,7 +9,7 @@ RUN apk add --no-cache git openssh-client curl
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci # Use --only=production if docker image will not be used to run npm dev
 
 # Copy source code
 COPY src/ ./src/
@@ -20,6 +20,6 @@ RUN chown -R node:node /app
 
 USER node
 
-EXPOSE 8080
+EXPOSE 8089
 
 CMD ["node", "src/server.js"]

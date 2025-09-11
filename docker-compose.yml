@@ -4,7 +4,7 @@ services:
     image: gitea/gitea:1.21
     container_name: gitea
     ports:
-      - "3001:3000"
+      - "3030:3000"
       - "2222:22"
     volumes:
       - gitea-data:/data
@@ -17,7 +17,7 @@ services:
       - GITEA__database__PATH=/data/gitea/gitea.db
       - GITEA__server__DOMAIN=localhost
       - GITEA__server__HTTP_PORT=3000
-      - GITEA__server__ROOT_URL=http://localhost:3001/
+      - GITEA__server__ROOT_URL=http://localhost:3030/
       - GITEA__security__INSTALL_LOCK=true
       - GITEA__webhook__ALLOWED_HOST_LIST=*
     networks:
@@ -31,13 +31,13 @@ services:
       dockerfile: Dockerfile
     container_name: mcp-git-server
     ports:
-      - "8080:8080"
+      - "8089:8089"
     volumes:
       - ./repositories:/workspace/repositories
       - ./mcp-server/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      - MCP_PORT=8080
+      - MCP_PORT=8089
       - GIT_CONFIG_GLOBAL_USER_NAME=AI Agent
       - GIT_CONFIG_GLOBAL_USER_EMAIL=agent@example.com
       - GITEA_URL=http://gitea:3000
@@ -87,7 +87,7 @@ services:
       - ./agent-orchestrator/config:/app/config
       - ./logs:/app/logs
     environment:
-      - MCP_SERVER_URL=http://mcp-git-server:8080
+      - MCP_SERVER_URL=http://mcp-git-server:8089
       - DEV_CONTAINER_URL=http://dev-container:22
       - LOG_LEVEL=info
     networks:
@@ -107,7 +107,7 @@ services:
       - "4000:4000"
     environment:
       - AGENT_ORCHESTRATOR_URL=http://agent-orchestrator:9000
-      - MCP_SERVER_URL=http://mcp-git-server:8080
+      - MCP_SERVER_URL=http://mcp-git-server:8089
     networks:
       - agent-network
     depends_on:
